@@ -417,7 +417,7 @@ async function fetchAds(accountId, period) {
     const batch = activeIds.slice(i, i + BATCH);
     const data = await metaGet('/', {
       ids:    batch.join(','),
-      fields: 'id,name,status,creative{thumbnail_url,image_url,effective_object_story_id}',
+      fields: 'id,name,status,creative{thumbnail_url,effective_object_story_id}',
     });
     // Resposta é um objeto { id: {...}, id2: {...} }
     Object.values(data).forEach(ad => detailMap.set(ad.id, ad));
@@ -432,7 +432,6 @@ async function fetchAds(accountId, period) {
       name:         ins.ad_name || detail.name || id,
       status:       (detail.status || 'unknown').toLowerCase(),
       thumbnailUrl: detail.creative?.thumbnail_url ?? null,
-      imageUrl:     detail.creative?.image_url ?? null,
       postId:       detail.creative?.effective_object_story_id ?? null,
       spend:        parseFloat(ins.spend       || 0),
       impressions:  parseInt(ins.impressions   || 0, 10),
@@ -442,6 +441,17 @@ async function fetchAds(accountId, period) {
       cpm:          parseFloat(ins.cpm         || 0),
       leads:        getLeads(ins.actions),
     };
+  });
+
+  return activeIds.map(id => {
+    const ins    = insMap.get(id)    || {};
+    const detail = detailMap.get(id) || {};
+    const ad = {
+      // ... campos normais
+    };
+    // temporário — remove depois
+    if (detail.creative) console.log(ad.id, detail.creative);
+    return ad;
   });
 }
 
@@ -579,7 +589,7 @@ function renderCreatives(top, avgCpl) {
     const cpl    = ad.spend / ad.leads;
     const cplStr = `R$${cpl.toFixed(2)}`;
     const cplCl  = cpl < avgCpl*0.7 ? 'green' : cpl > avgCpl*1.3 ? 'red' : '';
-    const imgSrc = ad.imageUrl || ad.thumbnailUrl || null;
+    const imgSrc = ad.thumbnailUrl || null;
     const thumb  = imgSrc
       ? `<img class="c-thumb" src="${imgSrc}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
       : '';
@@ -677,13 +687,6 @@ function openLb(adData, avgCpl) {
   media.innerHTML = imgSrc
     ? `<img class="lb-img" src="${imgSrc}" alt="${esc(ad.name)}" onerror="this.outerHTML='<div class=\\'lb-img-empty\\'>SEM IMAGEM</div>'">`
     : `<div class="lb-img-empty">SEM IMAGEM</div>`;
-  const lbLink = document.getElementById('lb-post-link');
-  if (ad.postId) {
-    lbLink.href = `https://www.facebook.com/${ad.postId}`;
-    lbLink.style.display = 'flex';
-  } else {
-    lbLink.style.display = 'none';
-  }
   document.getElementById('lb').classList.add('open');
 }
 function closeLb() { document.getElementById('lb').classList.remove('open'); }
