@@ -442,17 +442,6 @@ async function fetchAds(accountId, period) {
       leads:        getLeads(ins.actions),
     };
   });
-
-  return activeIds.map(id => {
-    const ins    = insMap.get(id)    || {};
-    const detail = detailMap.get(id) || {};
-    const ad = {
-      // ... campos normais
-    };
-    // temporário — remove depois
-    if (detail.creative) console.log(ad.id, detail.creative);
-    return ad;
-  });
 }
 
 // ── SETUP ──────────────────────────────────────────────────────────────────
@@ -721,7 +710,7 @@ function setLoader(on, title='CARREGANDO', sub='') {
 function esc(s='') { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function encodeAd(ad) {
   const s = v => (v||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-  return `{id:'${ad.id}',name:'${s(ad.name)}',thumbnailUrl:'${s(ad.thumbnailUrl)}',imageUrl:'${s(ad.imageUrl)}',postId:'${s(ad.postId)}',leads:${ad.leads},spend:${ad.spend},ctr:${ad.ctr}}`;
+  return `{id:'${ad.id}',name:'${s(ad.name)}',thumbnailUrl:'${s(ad.thumbnailUrl)}',postId:'${s(ad.postId)}',leads:${ad.leads},spend:${ad.spend},ctr:${ad.ctr}}`;
 }
 function periodLabel(p) {
   return {last_7d:'últimos 7 dias',last_14d:'últimos 14 dias',last_30d:'últimos 30 dias',this_month:'este mês',last_month:'mês passado'}[p]||p;
