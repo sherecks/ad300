@@ -165,10 +165,13 @@ td:first-child{text-align:left}
 /* ── LIGHTBOX ── */
 #lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:500;display:none;align-items:center;justify-content:center;padding:24px}
 #lb.open{display:flex}
-.lb-wrap{position:relative;background:var(--black);width:100%;max-width:480px}
+.lb-wrap{position:relative;background:var(--black);width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
 .lb-close{position:absolute;top:-38px;right:0;background:none;border:none;color:var(--white);font-size:30px;cursor:pointer;font-family:var(--fm);line-height:1}
 .lb-img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:var(--g200)}
 .lb-img-empty{width:100%;aspect-ratio:1/1;background:var(--g700);display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:11px;color:var(--g500);letter-spacing:2px}
+.lb-preview-loading{width:100%;min-height:200px;background:var(--g700);display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:11px;color:var(--g500);letter-spacing:2px;animation:pulse 1s ease-in-out infinite}
+.lb-preview-wrap{width:100%;background:#fff;display:flex;justify-content:center;overflow:hidden}
+.lb-preview-wrap iframe{display:block;border:none;max-width:100%}
 .lb-body{padding:16px 20px;border-top:3px solid var(--red)}
 .lb-name{font-family:var(--fm);font-size:11px;font-weight:600;color:var(--white);margin-bottom:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--g700)}
@@ -663,7 +666,16 @@ function buildAnalysis(ads, withLeads, avgCpl, pause) {
 }
 
 // ── LIGHTBOX ───────────────────────────────────────────────────────────────
-function openLb(adData, avgCpl) {
+async function fetchAdPreview(adId) {
+  try {
+    const data = await metaGet(`/${adId}/previews`, { ad_format: 'MOBILE_FEED_STANDARD' });
+    return data?.data?.[0]?.body ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function openLb(adData, avgCpl) {
   const ad  = adData;
   const cpl = ad.leads > 0 ? ad.spend/ad.leads : null;
   const cplCl = !cpl ? '' : cpl < avgCpl*0.7 ? 'green' : cpl > avgCpl*1.3 ? 'red' : '';
@@ -675,12 +687,19 @@ function openLb(adData, avgCpl) {
   document.getElementById('lb-spend').textContent   = `R$${ad.spend.toFixed(0)}`;
   document.getElementById('lb-ctr').textContent     = `${ad.ctr.toFixed(2)}%`;
 
-  const media  = document.getElementById('lb-media');
-  const imgSrc = ad.imageUrl || ad.thumbnailUrl || null;
-  media.innerHTML = imgSrc
-    ? `<img class="lb-img" src="${imgSrc}" alt="${esc(ad.name)}" onerror="this.outerHTML='<div class=\\'lb-img-empty\\'>SEM IMAGEM</div>'">`
-    : `<div class="lb-img-empty">SEM IMAGEM</div>`;
+  const media = document.getElementById('lb-media');
+  media.innerHTML = `<div class="lb-preview-loading">CARREGANDO PREVIEW</div>`;
   document.getElementById('lb').classList.add('open');
+
+  const iframeHtml = await fetchAdPreview(ad.id);
+  if (iframeHtml) {
+    media.innerHTML = `<div class="lb-preview-wrap">${iframeHtml}</div>`;
+  } else {
+    const imgSrc = ad.thumbnailUrl || null;
+    media.innerHTML = imgSrc
+      ? `<img class="lb-img" src="${imgSrc}" alt="${esc(ad.name)}" onerror="this.outerHTML='<div class=\\'lb-img-empty\\'>SEM IMAGEM</div>'">`
+      : `<div class="lb-img-empty">SEM IMAGEM</div>`;
+  }
 }
 function closeLb() { document.getElementById('lb').classList.remove('open'); }
 function lbClick(e){ if(e.target===document.getElementById('lb')) closeLb(); }
